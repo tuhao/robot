@@ -5,7 +5,7 @@ import robocode.util.Utils;
 
 public class TrackerTank extends AdvancedRobot {
 
-    double moveAngle = 0D;
+    double moveAngle = 15D;
 
     double enemyBearing = 0;
 
@@ -15,9 +15,13 @@ public class TrackerTank extends AdvancedRobot {
 
     double firePower = 2;
 
-    int dir = 1;
+    int swingDir = 1;
+
+    int movingDir = 1;
 
     int continuousHit = 0;
+
+    int continuousMissed = 0;
 
     int shot = 0;
 
@@ -51,8 +55,8 @@ public class TrackerTank extends AdvancedRobot {
         if (hitWall) {
             return;
         }
-        setTurnRight(enemyBearing);
-        setAhead(100);
+        setTurnRight(enemyBearing + moveAngle);
+        setAhead((enemyDistance - safeDistance) * movingDir);
     }
 
     private void hideBullet() {
@@ -72,15 +76,15 @@ public class TrackerTank extends AdvancedRobot {
         } else if (enemyBearing >= -180D && enemyBearing < -90D) {
             setTurnRight(enemyBearing + 90D);
         }
-        setAhead((100 + delta) * dir);
+        setBack((100 + delta) * swingDir);
         waitFor(new MoveCompleteCondition(this));
-        dir = -dir;
+        swingDir = -swingDir;
     }
 
     private void reloadBullet() {
         if (getEnergy() < 10) {
             firePower = getEnergy() / 10;
-        } else if (continuousHit >= 3) {
+        } else if (continuousHit >= 3 || enemyDistance <= 100) {
             firePower = 3;
         } else {
             firePower = 2;
@@ -89,20 +93,18 @@ public class TrackerTank extends AdvancedRobot {
 
     public void run() {
         moveToCenter();
+
         while (true) {
             if (getRadarTurnRemainingRadians() == 0) {
                 setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
             }
-            moveBody();
-            execute();
-        }
-    }
-
-    private void moveBody() {
-        if (enemyDistance > safeDistance) {
-            moveToEnemy();
-        } else {
-            hideBullet();
+//            if (enemyDistance > safeDistance) {
+//                moveToEnemy();
+//            } else {
+                hideBullet();
+                moveAngle = -moveAngle;
+                execute();
+//            }
         }
     }
 
@@ -110,10 +112,6 @@ public class TrackerTank extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
-        if (shot > 1) {
-            shot = 0;
-            return;
-        }
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         double bulletVelocity = 20 - 3 * firePower;
         double escapeRange = Math.sin(e.getHeadingRadians() - getGunHeadingRadians()) * e.getVelocity();
@@ -121,10 +119,35 @@ public class TrackerTank extends AdvancedRobot {
         double turnGunAngle = Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians() + escapeAngle);
         setTurnGunRightRadians(turnGunAngle);
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians()));
+        if (shot > 0) {
+            shot = 0;
+            return;
+        }
         waitFor(new GunTurnCompleteCondition(this));
         reloadBullet();
         setFire(firePower);
         shot++;
+    }
+
+    @Override
+    public void onBulletMissed(BulletMissedEvent event) {
+        continuousHit = 0;
+        continuousMissed++;
+    }
+
+    @Override
+    public void onBulletHit(BulletHitEvent event) {
+        continuousMissed = 0;
+        continuousHit++;
+    }
+
+    @Override
+    public void onHitRobot(HitRobotEvent e) {
+        if (!e.isMyFault()) {
+            movingDir = -1;
+            moveToEnemy();
+            movingDir = 1;
+        }
     }
 
     @Override
@@ -145,7 +168,7 @@ public class TrackerTank extends AdvancedRobot {
             }
         }
         waitFor(new TurnCompleteCondition(this));
-        setAhead(100);
+        setAhead(200);
         hitWall = false;
     }
 
