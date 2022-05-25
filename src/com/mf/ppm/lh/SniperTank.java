@@ -5,19 +5,15 @@ import robocode.util.Utils;
 
 public class SniperTank extends AdvancedRobot {
 
-    double moveAngle = 15D;
-
     double enemyBearing = 0;
 
     double enemyDistance = 1000;
 
-    double safeDistance = 400;
+    double enemyEnergy = 100D;
 
     double firePower = 2;
 
     int swingDir = 1;
-
-    int movingDir = 1;
 
     int continuousHit = 0;
 
@@ -49,23 +45,7 @@ public class SniperTank extends AdvancedRobot {
         waitFor(new MoveCompleteCondition(this));
     }
 
-    private void moveToEnemy() {
-        if (hitWall) {
-            return;
-        }
-        setTurnRight(enemyBearing + moveAngle);
-        setAhead((enemyDistance - safeDistance) * movingDir);
-    }
-
-    private void hideBullet() {
-        if (hitWall) {
-            return;
-        }
-        double delta = 0;
-        if (Math.random() > .5) {
-            delta = 50;
-        }
-        ahead((100 + delta) * swingDir);
+    private void turnHeading() {
         if (enemyBearing >= 90D && enemyBearing < 180D) {
             setTurnRight(enemyBearing - 90D);
         } else if (enemyBearing >= -90D && enemyBearing < 0) {
@@ -75,16 +55,17 @@ public class SniperTank extends AdvancedRobot {
         } else if (enemyBearing >= -180D && enemyBearing < -90D) {
             setTurnRight(enemyBearing + 90D);
         }
-        swingDir = -swingDir;
     }
 
     private void reloadBullet() {
         if (getEnergy() < 10) {
             firePower = getEnergy() / 10;
+        } else if (enemyEnergy < 30) {
+            firePower = 2;
         } else if (continuousHit >= 3 || enemyDistance <= 100) {
             firePower = 3;
         } else {
-            firePower = 2;
+            firePower = 3;
         }
     }
 
@@ -92,11 +73,21 @@ public class SniperTank extends AdvancedRobot {
         moveToCenter();
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-//            if (enemyDistance > safeDistance || enemyDistance <= closeDistance) {
-//                moveToEnemy();
-//            }
-//            moveAngle = -moveAngle;
-            hideBullet();
+
+            double delta = 0;
+            if (Math.random() > .5) {
+                delta = 50;
+            }
+            double moveDistance = (100 + delta) * swingDir;
+            if (enemyDistance < 200) {
+                moveDistance = moveDistance / 2;
+            }
+            ahead(moveDistance);
+            turnHeading();
+            if (enemyDistance >= 200) {
+                ahead(moveDistance);
+            }
+            swingDir = -swingDir;
             execute();
         }
     }
@@ -114,6 +105,7 @@ public class SniperTank extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
+        enemyEnergy = e.getEnergy();
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         aimByVelocity(e);
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians()));
