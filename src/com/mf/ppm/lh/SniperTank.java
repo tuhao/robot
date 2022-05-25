@@ -3,7 +3,7 @@ package com.mf.ppm.lh;
 import robocode.*;
 import robocode.util.Utils;
 
-public class TrackerTank extends AdvancedRobot {
+public class SniperTank extends AdvancedRobot {
 
     double moveAngle = 15D;
 
@@ -12,8 +12,6 @@ public class TrackerTank extends AdvancedRobot {
     double enemyDistance = 1000;
 
     double safeDistance = 400;
-
-    double closeDistance = 150;
 
     double firePower = 2;
 
@@ -26,6 +24,30 @@ public class TrackerTank extends AdvancedRobot {
     int continuousMissed = 0;
 
     boolean hitWall = false;
+
+    private void moveToCenter() {
+        double x = getX();
+        double y = getY();
+        double deltaX = x - getBattleFieldWidth() / 2;
+        double deltaY = y - getBattleFieldHeight() / 2;
+        double angleToCenter = Math.atan(Math.abs(deltaX / deltaY));
+        if (deltaX >= 0) {
+            if (deltaY >= 0) {
+                turnLeftRadians(Math.PI - angleToCenter + getHeadingRadians());
+            } else {
+                turnLeftRadians(angleToCenter + getHeadingRadians());
+            }
+        } else {
+            if (deltaY >= 0) {
+                turnLeftRadians(Math.PI + angleToCenter + getHeadingRadians());
+            } else {
+                turnLeftRadians(-angleToCenter + getHeadingRadians());
+            }
+        }
+        waitFor(new TurnCompleteCondition(this));
+        setAhead(Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2)));
+        waitFor(new MoveCompleteCondition(this));
+    }
 
     private void moveToEnemy() {
         if (hitWall) {
@@ -67,14 +89,14 @@ public class TrackerTank extends AdvancedRobot {
     }
 
     public void run() {
+        moveToCenter();
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-            if (enemyDistance > safeDistance || enemyDistance <= closeDistance) {
-                moveToEnemy();
-                moveAngle = -moveAngle;
-            } else {
-                hideBullet();
-            }
+//            if (enemyDistance > safeDistance || enemyDistance <= closeDistance) {
+//                moveToEnemy();
+//            }
+//            moveAngle = -moveAngle;
+            hideBullet();
             execute();
         }
     }
@@ -144,4 +166,5 @@ public class TrackerTank extends AdvancedRobot {
             turnLeft(30);
         }
     }
+
 }
