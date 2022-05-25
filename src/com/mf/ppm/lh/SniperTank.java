@@ -11,6 +11,8 @@ public class SniperTank extends AdvancedRobot {
 
     double enemyEnergy = 100D;
 
+    double safeDistance = 300;
+
     double firePower = 2;
 
     int swingDir = 1;
@@ -45,22 +47,22 @@ public class SniperTank extends AdvancedRobot {
         waitFor(new MoveCompleteCondition(this));
     }
 
-    private void turnHeading() {
+    private void turnHeading(double delta) {
         if (enemyBearing >= 90D && enemyBearing < 180D) {
-            setTurnRight(enemyBearing - 90D);
+            setTurnRight(enemyBearing - 90D - delta);
         } else if (enemyBearing >= -90D && enemyBearing < 0) {
-            setTurnRight(enemyBearing + 90D);
+            setTurnRight(enemyBearing + 90D + delta);
         } else if (enemyBearing >= 0 && enemyBearing < 90D) {
-            setTurnRight(enemyBearing - 90D);
+            setTurnRight(enemyBearing - 90D - delta);
         } else if (enemyBearing >= -180D && enemyBearing < -90D) {
-            setTurnRight(enemyBearing + 90D);
+            setTurnRight(enemyBearing + 90D + delta);
         }
     }
 
     private void reloadBullet() {
         if (getEnergy() < 10) {
             firePower = getEnergy() / 10;
-        } else if (continuousHit >= 2 || enemyDistance <= 300) {
+        } else if (continuousHit >= 2 || enemyDistance <= safeDistance) {
             firePower = 3;
         } else {
             firePower = 2;
@@ -68,22 +70,22 @@ public class SniperTank extends AdvancedRobot {
     }
 
     public void run() {
+        setAdjustRadarForGunTurn(true);
+        setAdjustGunForRobotTurn(true);
         moveToCenter();
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
 
-            double delta = 0;
-            if (Math.random() > .5) {
-                delta = 50;
+            double deltaAngle = 0;
+            double moveDistance = 100;
+            double deltaDistance = Math.max(50, Math.random() * 100);
+            if (enemyDistance < safeDistance) {
+                deltaAngle = -30D * swingDir;
             }
-            double moveDistance = (100 + delta) * swingDir;
-            if (enemyDistance < 200) {
-                moveDistance = moveDistance / 2;
-            }
-            ahead(moveDistance);
-            turnHeading();
-            if (enemyDistance >= 200) {
-                ahead(moveDistance);
+            ahead((100 + deltaDistance) * swingDir);
+            turnHeading(deltaAngle);
+            if (enemyDistance >= safeDistance) {
+                ahead(moveDistance * swingDir);
             }
             swingDir = -swingDir;
             execute();
@@ -146,7 +148,7 @@ public class SniperTank extends AdvancedRobot {
             }
         }
         waitFor(new TurnCompleteCondition(this));
-        setAhead(200);
+        setAhead(100);
         hitWall = false;
     }
 
