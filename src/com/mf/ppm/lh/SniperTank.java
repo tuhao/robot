@@ -60,7 +60,7 @@ public class SniperTank extends AdvancedRobot {
     private void reloadBullet() {
         if (getEnergy() < 10) {
             firePower = getEnergy() / 10;
-        } else if (continuousHit >= 3 || enemyDistance <= 200) {
+        } else if (continuousHit >= 2 || enemyDistance <= 300) {
             firePower = 3;
         } else {
             firePower = 2;
