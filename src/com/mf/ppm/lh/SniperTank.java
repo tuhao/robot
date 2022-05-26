@@ -13,8 +13,6 @@ public class SniperTank extends AdvancedRobot {
 
     double safeDistance = 300;
 
-    double firePower = 2;
-
     int swingDir = 1;
 
     int continuousHit = 0;
@@ -59,13 +57,13 @@ public class SniperTank extends AdvancedRobot {
         }
     }
 
-    private void reloadBullet() {
+    private double reloadBullet() {
         if (getEnergy() < 10) {
-            firePower = getEnergy() / 10;
-        } else if (continuousHit >= 2 || enemyDistance <= safeDistance) {
-            firePower = 3;
+            return getEnergy() / 10;
+        } else if (continuousHit >= 2 || enemyDistance < safeDistance) {
+            return 3;
         } else {
-            firePower = 2;
+            return 2;
         }
     }
 
@@ -92,10 +90,13 @@ public class SniperTank extends AdvancedRobot {
         }
     }
 
-    private void aimByVelocity(ScannedRobotEvent e) {
+    private void aimByVelocity(ScannedRobotEvent e, double firePower) {
         double bulletVelocity = 20 - 3 * firePower;
         double escapeRange = Math.sin(e.getHeadingRadians() - getGunHeadingRadians()) * e.getVelocity();
         double escapeAngle = Math.asin(escapeRange / bulletVelocity);
+        if (e.getDistance() < safeDistance) {
+            escapeAngle /= 3;
+        }
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         double turnGunAngle = Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians() + escapeAngle);
         setTurnGunRightRadians(turnGunAngle);
@@ -106,11 +107,11 @@ public class SniperTank extends AdvancedRobot {
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
         enemyEnergy = e.getEnergy();
+        double firePower = reloadBullet();
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
-        aimByVelocity(e);
+        aimByVelocity(e, firePower);
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians()));
         waitFor(new GunTurnCompleteCondition(this));
-        reloadBullet();
         setFire(firePower);
     }
 
