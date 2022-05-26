@@ -3,23 +3,19 @@ package com.mf.ppm.lh;
 import robocode.*;
 import robocode.util.Utils;
 
-public class TrackerTank extends AdvancedRobot {
+import java.awt.*;
 
-    double moveAngle = 15D;
+public class LHTank1 extends AdvancedRobot {
 
     double enemyBearing = 0;
 
     double enemyDistance = 1000;
 
-    double safeDistance = 400;
+    double enemyEnergy = 100D;
 
-    double closeDistance = 150;
-
-    double firePower = 2;
+    double safeDistance = 300;
 
     int swingDir = 1;
-
-    int movingDir = 1;
 
     int continuousHit = 0;
 
@@ -27,59 +23,78 @@ public class TrackerTank extends AdvancedRobot {
 
     boolean hitWall = false;
 
-    private void moveToEnemy() {
-        if (hitWall) {
-            return;
-        }
-        setTurnRight(enemyBearing + moveAngle);
-        setAhead((enemyDistance - safeDistance) * movingDir);
-    }
-
-    private void hideBullet() {
-        if (hitWall) {
-            return;
-        }
-        double delta = 0;
-        if (Math.random() > .5) {
-            delta = 50;
-        }
-        ahead((100 + delta) * swingDir);
-        if (enemyBearing >= 90D && enemyBearing < 180D) {
-            setTurnRight(enemyBearing - 90D);
-        } else if (enemyBearing >= -90D && enemyBearing < 0) {
-            setTurnRight(enemyBearing + 90D);
-        } else if (enemyBearing >= 0 && enemyBearing < 90D) {
-            setTurnRight(enemyBearing - 90D);
-        } else if (enemyBearing >= -180D && enemyBearing < -90D) {
-            setTurnRight(enemyBearing + 90D);
-        }
-        swingDir = -swingDir;
-    }
-
-    private void reloadBullet() {
-        if (getEnergy() < 10) {
-            firePower = getEnergy() / 10;
-        } else if (continuousHit >= 3 || enemyDistance <= 100) {
-            firePower = 3;
+    private void moveToCenter() {
+        double x = getX();
+        double y = getY();
+        double deltaX = x - getBattleFieldWidth() / 2;
+        double deltaY = y - getBattleFieldHeight() / 2;
+        double angleToCenter = Math.atan(Math.abs(deltaX / deltaY));
+        if (deltaX >= 0) {
+            if (deltaY >= 0) {
+                turnLeftRadians(Math.PI - angleToCenter + getHeadingRadians());
+            } else {
+                turnLeftRadians(angleToCenter + getHeadingRadians());
+            }
         } else {
-            firePower = 2;
+            if (deltaY >= 0) {
+                turnLeftRadians(Math.PI + angleToCenter + getHeadingRadians());
+            } else {
+                turnLeftRadians(-angleToCenter + getHeadingRadians());
+            }
+        }
+        waitFor(new TurnCompleteCondition(this));
+        setAhead(Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2)));
+        waitFor(new MoveCompleteCondition(this));
+    }
+
+    private void turnHeading(double delta) {
+        if (enemyBearing >= 90D && enemyBearing < 180D) {
+            setTurnRight(enemyBearing - 90D - delta);
+        } else if (enemyBearing >= -90D && enemyBearing < 0) {
+            setTurnRight(enemyBearing + 90D + delta);
+        } else if (enemyBearing >= 0 && enemyBearing < 90D) {
+            setTurnRight(enemyBearing - 90D - delta);
+        } else if (enemyBearing >= -180D && enemyBearing < -90D) {
+            setTurnRight(enemyBearing + 90D + delta);
+        }
+    }
+
+    private double reloadBullet() {
+        if (getEnergy() < 10) {
+            return getEnergy() / 10;
+        } else if (continuousHit >= 2 || enemyDistance < safeDistance) {
+            return 3;
+        } else {
+            return 2;
         }
     }
 
     public void run() {
+        setBodyColor(Color.blue);
+        setGunColor(Color.blue);
+        setRadarColor(Color.green);
+
+        setAdjustRadarForGunTurn(true);
+        setAdjustGunForRobotTurn(true);
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-            if (enemyDistance > safeDistance || enemyDistance <= closeDistance) {
-                moveToEnemy();
-                moveAngle = -moveAngle;
-            } else {
-                hideBullet();
+            double deltaAngle = 0;
+            double deltaDistance = Math.max(50, Math.random() * 100);
+            double moveDistance = 100;
+            ahead((moveDistance + deltaDistance) * swingDir);
+            if (enemyDistance > 100 && enemyDistance < safeDistance) {
+                deltaAngle = -30D * swingDir;
+            }
+            turnHeading(deltaAngle);
+            if (enemyDistance > 100) {
+                ahead(moveDistance * swingDir);
+                swingDir = -swingDir;
             }
             execute();
         }
     }
 
-    private void aimByVelocity(ScannedRobotEvent e) {
+    private void aimByVelocity(ScannedRobotEvent e, double firePower) {
         double bulletVelocity = 20 - 3 * firePower;
         double escapeRange = Math.sin(e.getHeadingRadians() - getGunHeadingRadians()) * e.getVelocity();
         double escapeAngle = Math.asin(escapeRange / bulletVelocity);
@@ -92,11 +107,12 @@ public class TrackerTank extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
+        enemyEnergy = e.getEnergy();
+        double firePower = reloadBullet();
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
-        aimByVelocity(e);
+        aimByVelocity(e, firePower);
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians()));
         waitFor(new GunTurnCompleteCondition(this));
-        reloadBullet();
         setFire(firePower);
     }
 
@@ -114,6 +130,7 @@ public class TrackerTank extends AdvancedRobot {
 
     @Override
     public void onHitRobot(HitRobotEvent e) {
+        enemyDistance = 0;
     }
 
     @Override
@@ -134,7 +151,7 @@ public class TrackerTank extends AdvancedRobot {
             }
         }
         waitFor(new TurnCompleteCondition(this));
-        setAhead(200);
+        setAhead(100);
         hitWall = false;
     }
 
@@ -144,4 +161,5 @@ public class TrackerTank extends AdvancedRobot {
             turnLeft(30);
         }
     }
+
 }
