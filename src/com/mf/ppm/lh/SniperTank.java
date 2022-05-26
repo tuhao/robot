@@ -73,19 +73,18 @@ public class SniperTank extends AdvancedRobot {
         moveToCenter();
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-
             double deltaAngle = 0;
-            double moveDistance = 100;
             double deltaDistance = Math.max(50, Math.random() * 100);
-            if (enemyDistance < safeDistance) {
+            double moveDistance = 100;
+            ahead((moveDistance + deltaDistance) * swingDir);
+            if (enemyDistance > 100 && enemyDistance < safeDistance) {
                 deltaAngle = -30D * swingDir;
             }
-            ahead((100 + deltaDistance) * swingDir);
             turnHeading(deltaAngle);
-            if (enemyDistance >= safeDistance) {
+            if (enemyDistance > 100) {
                 ahead(moveDistance * swingDir);
+                swingDir = -swingDir;
             }
-            swingDir = -swingDir;
             execute();
         }
     }
@@ -94,9 +93,6 @@ public class SniperTank extends AdvancedRobot {
         double bulletVelocity = 20 - 3 * firePower;
         double escapeRange = Math.sin(e.getHeadingRadians() - getGunHeadingRadians()) * e.getVelocity();
         double escapeAngle = Math.asin(escapeRange / bulletVelocity);
-        if (e.getDistance() < safeDistance) {
-            escapeAngle /= 3;
-        }
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         double turnGunAngle = Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians() + escapeAngle);
         setTurnGunRightRadians(turnGunAngle);
@@ -129,6 +125,7 @@ public class SniperTank extends AdvancedRobot {
 
     @Override
     public void onHitRobot(HitRobotEvent e) {
+        enemyDistance = 0;
     }
 
     @Override
