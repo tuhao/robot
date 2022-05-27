@@ -39,9 +39,6 @@ public class LHTank2 extends AdvancedRobot {
         double bulletVelocity = 20 - 3 * firePower;
         double escapeRange = Math.sin(e.getHeadingRadians() - getGunHeadingRadians()) * e.getVelocity();
         double escapeAngle = Math.asin(escapeRange / bulletVelocity);
-        if (e.getDistance() < 100) {
-            escapeAngle /= 3;
-        }
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         double turnGunAngle = Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians() + escapeAngle);
         setTurnGunRightRadians(turnGunAngle);
