@@ -52,9 +52,12 @@ public class LHTank2 extends AdvancedRobot {
         double turn = absoluteBearing + Math.PI / 2;
         double deltaAngle = Math.max(0.5, (1 / e.getDistance()) * 100) * dir;
         if (e.getDistance() > 300) {
+            setMaxVelocity(Math.max(2, Math.random() * 10));
             turn -= deltaAngle;
         } else if (e.getDistance() < 100) {
             turn += deltaAngle;
+        } else {
+            turn -= Math.min(.3, Math.random()) * deltaAngle;
         }
         setFire(firePower);
         setTurnRightRadians(Utils.normalRelativeAngle(turn - getHeadingRadians()));
