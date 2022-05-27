@@ -11,7 +11,7 @@ public class LHTank1 extends AdvancedRobot {
 
     double enemyDistance = 1000;
 
-    double dogFightDistance = 200;
+    double dogFightDistance = 250;
 
     double safeDistance = 300;
 
@@ -72,7 +72,9 @@ public class LHTank1 extends AdvancedRobot {
 
         setAdjustRadarForGunTurn(true);
         setAdjustGunForRobotTurn(true);
+        long count = 0;
         while (true) {
+            count++;
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
             if (enemyDistance > dogFightDistance) {
                 double deltaAngle = 0;
@@ -86,7 +88,9 @@ public class LHTank1 extends AdvancedRobot {
                 if (enemyDistance >= safeDistance) {
                     ahead(100 * swingDir);
                 }
-                swingDir = -swingDir;
+                if (count % 2 == 0) {
+                    swingDir = -swingDir;
+                }
             }
             execute();
         }
@@ -126,7 +130,7 @@ public class LHTank1 extends AdvancedRobot {
 
     @Override
     public void onHitWall(HitWallEvent e) {
-        if (enemyDistance > dogFightDistance) {
+        if (enemyDistance > safeDistance) {
             double wallBearing = e.getBearing();
             if (wallBearing >= -90D && wallBearing < 90D) {
                 if (wallBearing < 0) {
@@ -142,7 +146,7 @@ public class LHTank1 extends AdvancedRobot {
                 }
             }
             waitFor(new TurnCompleteCondition(this));
-            setAhead(100);
+            setAhead(200);
         } else {
             swingDir = -swingDir;
         }
@@ -151,7 +155,7 @@ public class LHTank1 extends AdvancedRobot {
     @Override
     public void onHitByBullet(HitByBulletEvent event) {
         hitByBullet++;
-        if (hitByBullet % 2 == 0 && enemyDistance > dogFightDistance) {
+        if (hitByBullet % 2 == 0 && enemyDistance > safeDistance) {
             swingDir = -swingDir;
         }
     }
