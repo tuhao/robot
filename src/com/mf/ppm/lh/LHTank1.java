@@ -11,17 +11,13 @@ public class LHTank1 extends AdvancedRobot {
 
     double enemyDistance = 1000;
 
-    double enemyEnergy = 100D;
+    double dogFightDistance = 200;
 
     double safeDistance = 300;
 
     int swingDir = 1;
 
-    int continuousHit = 0;
-
-    int continuousMissed = 0;
-
-    boolean hitWall = false;
+    int hitByBullet = 0;
 
     private void moveToCenter() {
         double x = getX();
@@ -62,7 +58,7 @@ public class LHTank1 extends AdvancedRobot {
     private double reloadBullet() {
         if (getEnergy() < 10) {
             return getEnergy() / 10;
-        } else if (continuousHit >= 2 || enemyDistance < safeDistance) {
+        } else if (enemyDistance <= dogFightDistance) {
             return 3;
         } else {
             return 2;
@@ -78,16 +74,18 @@ public class LHTank1 extends AdvancedRobot {
         setAdjustGunForRobotTurn(true);
         while (true) {
             setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
-            double deltaAngle = 0;
-            double deltaDistance = Math.max(50, Math.random() * 100);
-            double moveDistance = 100;
-            ahead((moveDistance + deltaDistance) * swingDir);
-            if (enemyDistance > 100 && enemyDistance < safeDistance) {
-                deltaAngle = -30D * swingDir;
-            }
-            turnHeading(deltaAngle);
-            if (enemyDistance > 100) {
-                ahead(moveDistance * swingDir);
+            if (enemyDistance > dogFightDistance) {
+                double deltaAngle = 0;
+                double deltaDistance = Math.max(50, Math.random() * 100);
+                if (enemyDistance > 600) {
+                    deltaAngle = 15D * swingDir;
+                    deltaDistance += 20;
+                }
+                ahead((100 + deltaDistance) * swingDir);
+                turnHeading(deltaAngle);
+                if (enemyDistance >= safeDistance) {
+                    ahead(100 * swingDir);
+                }
                 swingDir = -swingDir;
             }
             execute();
@@ -107,25 +105,18 @@ public class LHTank1 extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
-        enemyEnergy = e.getEnergy();
         double firePower = reloadBullet();
         double absoluteBearing = e.getBearingRadians() + getHeadingRadians();
         aimByVelocity(e, firePower);
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absoluteBearing - getGunHeadingRadians()));
         waitFor(new GunTurnCompleteCondition(this));
         setFire(firePower);
-    }
-
-    @Override
-    public void onBulletMissed(BulletMissedEvent event) {
-        continuousHit = 0;
-        continuousMissed++;
-    }
-
-    @Override
-    public void onBulletHit(BulletHitEvent event) {
-        continuousMissed = 0;
-        continuousHit++;
+        if (enemyDistance <= dogFightDistance) {
+            double turn = absoluteBearing + Math.PI / 2;
+            setTurnRightRadians(Utils.normalRelativeAngle(turn - getHeadingRadians()));
+            double deltaDistance = Math.max(50, Math.random() * 100);
+            setAhead((100 + deltaDistance) * swingDir);
+        }
     }
 
     @Override
@@ -135,24 +126,34 @@ public class LHTank1 extends AdvancedRobot {
 
     @Override
     public void onHitWall(HitWallEvent e) {
-        hitWall = true;
-        double wallBearing = e.getBearing();
-        if (wallBearing >= -90D && wallBearing < 90D) {
-            if (wallBearing < 0) {
-                setTurnRight(120D + wallBearing);
+        if (enemyDistance > dogFightDistance) {
+            double wallBearing = e.getBearing();
+            if (wallBearing >= -90D && wallBearing < 90D) {
+                if (wallBearing < 0) {
+                    setTurnRight(120D + wallBearing);
+                } else {
+                    setTurnLeft(120D - wallBearing);
+                }
             } else {
-                setTurnLeft(120D - wallBearing);
+                if (wallBearing < -90D) {
+                    setTurnRight(180D + wallBearing);
+                } else {
+                    setTurnLeft(180D - wallBearing);
+                }
             }
+            waitFor(new TurnCompleteCondition(this));
+            setAhead(100);
         } else {
-            if (wallBearing < -90D) {
-                setTurnRight(180D + wallBearing);
-            } else {
-                setTurnLeft(180D - wallBearing);
-            }
+            swingDir = -swingDir;
         }
-        waitFor(new TurnCompleteCondition(this));
-        setAhead(100);
-        hitWall = false;
+    }
+
+    @Override
+    public void onHitByBullet(HitByBulletEvent event) {
+        hitByBullet++;
+        if (hitByBullet % 2 == 0 && enemyDistance > dogFightDistance) {
+            swingDir = -swingDir;
+        }
     }
 
     public void onWin(WinEvent e) {
