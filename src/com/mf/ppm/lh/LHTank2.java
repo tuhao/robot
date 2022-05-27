@@ -55,8 +55,10 @@ public class LHTank2 extends AdvancedRobot {
             setMaxVelocity(Math.max(2, Math.random() * 10));
             turn -= deltaAngle;
         } else if (e.getDistance() < 100) {
+            setMaxVelocity(Rules.MAX_VELOCITY);
             turn += deltaAngle;
         } else {
+            setMaxVelocity(Rules.MAX_VELOCITY);
             turn -= Math.min(.3, Math.random()) * deltaAngle;
         }
         setFire(firePower);
